@@ -1,0 +1,149 @@
+import tkinter as tk
+from tkinter import messagebox
+from tkcalendar import DateEntry
+import datetime
+
+def add_task():
+    global update_index
+    task = entry_task.get("1.0", tk.END).strip()
+    date = cal.get_date()
+    time = entry_time.get().strip()
+    ampm = ampm_var.get()
+
+    if task.strip() != "":
+        task_with_time = f"{task} - {date} {time} {ampm}"
+
+        if update_index is None:      
+            listbox_tasks.insert(tk.END, task_with_time)
+        else:         # Update the existing task
+            listbox_tasks.delete(update_index)
+            listbox_tasks.insert(update_index, task_with_time)
+            update_index = None
+            btn_add_task.config(text="Add Task", bg="green")
+
+        entry_task.delete("1.0", tk.END)   # Clear fields
+        entry_time.delete(0, tk.END)
+        ampm_var.set("AM")
+    else:
+        messagebox.showwarning("Warning", "You must enter a task.")
+
+def mark_complete():
+    try:
+        selected_task_index = listbox_tasks.curselection()[0]
+        task = listbox_tasks.get(selected_task_index)
+        listbox_tasks.delete(selected_task_index)
+        listbox_tasks.insert(tk.END, f"{task} ✔")
+    except:
+        messagebox.showwarning("Warning", "Please select a task to mark complete.")
+
+def delete_task():
+    try:
+        selected_task_index = listbox_tasks.curselection()[0]
+        listbox_tasks.delete(selected_task_index)
+    except:
+        messagebox.showwarning("Warning", "Please select a task to delete.")
+
+def update_task():
+    global update_index
+    try:
+        update_index = listbox_tasks.curselection()[0]
+        task = listbox_tasks.get(update_index)
+        parts = task.split(" - ")
+        entry_task.delete("1.0", tk.END)
+        entry_task.insert("1.0", parts[0])
+
+        if len(parts) > 1:
+            datetime_part = parts[1].split()
+            cal.set_date(datetime_part[0])  
+            entry_time.delete(0, tk.END)
+            if len(datetime_part) >= 2:
+                entry_time.insert(0, datetime_part[1])
+            if len(datetime_part) == 3:
+                ampm_var.set(datetime_part[2])
+
+        btn_add_task.config(text="Save Update", bg="orange")
+    except:
+        messagebox.showwarning("Warning", "Please select a task to update.")
+
+def check_reminders():
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+
+    for i in range(listbox_tasks.size()):
+        task = listbox_tasks.get(i)
+        try:
+            task_parts = task.split(" - ")
+            if len(task_parts) >= 2:
+                task_datetime_str = task_parts[-1].strip()  
+                task_dt = datetime.datetime.strptime(task_datetime_str, "%Y-%m-%d %I:%M %p")
+
+                if task_dt == now:
+                    messagebox.showinfo("Reminder", f"It's time for: {task_parts[0]}")
+        except Exception as e:
+            pass
+
+    root.after(4000, check_reminders)  
+
+
+root = tk.Tk()
+root.title("To-Do List")
+root.geometry("600x550")
+root.configure(bg="#fff8dc")
+
+update_index = None  
+
+lbl_title = tk.Label(root, text="To-Do List 📝", font=("Arial", 20, "bold"), bg="#ffcc00", fg="black")
+lbl_title.pack(pady=10, fill="x")
+
+frame_task = tk.Frame(root, bg="#fff8dc")
+frame_task.pack(pady=5)
+
+lbl_task = tk.Label(frame_task, text="Enter Task:-", font=("Arial", 12), bg="#fff8dc")
+lbl_task.grid(row=0, column=0, padx=5)
+
+entry_task = tk.Text(frame_task, width=40,height=2, font=("Arial", 12))
+entry_task.grid(row=0, column=1, padx=5)
+
+frame_datetime = tk.Frame(root, bg="#fff8dc")
+frame_datetime.pack(pady=5)
+
+lbl_date = tk.Label(frame_datetime, text="Due Date:", font=("Arial", 12), bg="#fff8dc")
+lbl_date.grid(row=0, column=0, padx=5)
+
+cal = DateEntry(frame_datetime, width=12, background='darkblue',
+                foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd')
+cal.grid(row=0, column=1, padx=5)
+
+lbl_time = tk.Label(frame_datetime, text="Time (hh:mm):", font=("Arial", 12), bg="#fff8dc")
+lbl_time.grid(row=0, column=2, padx=5)
+
+entry_time = tk.Entry(frame_datetime, width=10, font=("Arial", 12))
+entry_time.grid(row=0, column=3, padx=5)
+
+ampm_var = tk.StringVar(value="AM")
+ampm_menu = tk.OptionMenu(frame_datetime, ampm_var, "AM", "PM")
+ampm_menu.grid(row=0, column=4, padx=5)
+
+btn_add_task = tk.Button(frame_datetime, text="Add Task", bg="green", fg="white",
+                         font=("Arial", 12, "bold"), command=add_task)
+btn_add_task.grid(row=0, column=5, padx=5)
+
+listbox_tasks = tk.Listbox(root, width=70, height=15, font=("Arial", 12))
+listbox_tasks.pack(pady=10)
+
+frame_buttons = tk.Frame(root, bg="#fff8dc")
+frame_buttons.pack(pady=10)
+
+btn_complete = tk.Button(frame_buttons, text="Mark Complete ✔", bg="blue", fg="white",
+                         font=("Arial", 12, "bold"), command=mark_complete)
+btn_complete.grid(row=0, column=0, padx=10)
+
+btn_update = tk.Button(frame_buttons, text="Update Task ✏️", bg="orange", fg="white",
+                       font=("Arial", 12, "bold"), command=update_task)
+btn_update.grid(row=0, column=1, padx=10)
+
+btn_delete = tk.Button(frame_buttons, text="Delete Task", bg="red", fg="white",
+                       font=("Arial", 12, "bold"), command=delete_task)
+btn_delete.grid(row=0, column=2, padx=10)
+
+check_reminders()
+root.mainloop()
